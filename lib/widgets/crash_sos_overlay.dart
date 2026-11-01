@@ -1,10 +1,13 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
-import '../services/mock_data_service.dart';
 
-/// Critical Crash SOS Dialog that ONLY triggers upon high-G impact / crash detection.
-/// Provides an automated 10-second cancel window before dispatching emergency SMS/calls.
+import 'package:flutter/material.dart';
+
+import '../services/mock_data_service.dart';
+import '../theme/app_theme.dart';
+
+/// Crash SOS demonstration dialog.
+///
+/// This demo does not send real SMS messages or phone calls.
 class CrashSosOverlay extends StatefulWidget {
   final double detectedGForce;
   final VoidCallback onDismiss;
@@ -15,14 +18,17 @@ class CrashSosOverlay extends StatefulWidget {
     required this.onDismiss,
   });
 
-  /// Helper static method to display this dialog from anywhere in the app.
-  static Future<void> show(BuildContext context, {double gForce = 3.4}) {
-    return showDialog(
+  /// Opens the dialog from anywhere in the app.
+  static Future<void> show(
+    BuildContext context, {
+    double gForce = 3.4,
+  }) {
+    return showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => CrashSosOverlay(
+      builder: (dialogContext) => CrashSosOverlay(
         detectedGForce: gForce,
-        onDismiss: () => Navigator.of(ctx).pop(),
+        onDismiss: () => Navigator.of(dialogContext).pop(),
       ),
     );
   }
@@ -33,14 +39,21 @@ class CrashSosOverlay extends StatefulWidget {
 
 class _CrashSosOverlayState extends State<CrashSosOverlay>
     with SingleTickerProviderStateMixin {
-  int _countdown = 10;
+  static const int _cancelWindowSeconds = 10;
+
+  int _countdown = _cancelWindowSeconds;
   Timer? _timer;
-  late AnimationController _pulseController;
-  bool _isDispatched = false;
+  late final AnimationController _pulseController;
+
+  bool _isCancelled = false;
+  bool _isSimulationComplete = false;
+
+  bool get _isWaiting => !_isCancelled && !_isSimulationComplete;
 
   @override
   void initState() {
     super.initState();
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
@@ -53,15 +66,44 @@ class _CrashSosOverlayState extends State<CrashSosOverlay>
 
   void _startCountdown() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || !_isWaiting) {
+        timer.cancel();
+        return;
+      }
+
       if (_countdown > 1) {
-        setState(() => _countdown--);
+        setState(() {
+          _countdown--;
+        });
       } else {
         timer.cancel();
         setState(() {
-          _isDispatched = true;
+          _countdown = 0;
+          _isSimulationComplete = true;
         });
       }
     });
+  }
+
+  void _cancelSos() {
+    if (!_isWaiting) return;
+
+    _timer?.cancel();
+    setState(() {
+      _isCancelled = true;
+    });
+  }
+
+  void _simulateDispatchNow() {
+    if (!_isWaiting) return;
+
+    _timer?.cancel();
+    setState(() {
+      _countdown = 0;
+      _isSimulationComplete = true;
+    });
+
+    // Demo only: this does not send a real SMS or place a call.
   }
 
   @override
@@ -75,15 +117,35 @@ class _CrashSosOverlayState extends State<CrashSosOverlay>
   Widget build(BuildContext context) {
     final driver = MockDataService.currentDriver;
 
+    final String statusText;
+    final Color statusColor;
+
+    if (_isCancelled) {
+      statusText = 'SOS CANCELLED — No alert was sent.';
+      statusColor = AppTheme.cyanAccent;
+    } else if (_isSimulationComplete) {
+      statusText = 'DEMO: SOS dispatch simulated.';
+      statusColor = AppTheme.amberWarning;
+    } else {
+      statusText = 'Emergency SOS will be sent in $_countdown seconds.';
+      statusColor = Colors.white;
+    }
+
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 24,
+      ),
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: const Color(0xFF1F0B0B),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppTheme.redDanger, width: 2),
+          border: Border.all(
+            color: AppTheme.redDanger,
+            width: 2,
+          ),
           boxShadow: [
             BoxShadow(
               color: AppTheme.redDanger.withOpacity(0.4),
@@ -95,7 +157,6 @@ class _CrashSosOverlayState extends State<CrashSosOverlay>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Pulsating Danger Beacon
             ScaleTransition(
               scale: _pulseController,
               child: Container(
@@ -114,7 +175,7 @@ class _CrashSosOverlayState extends State<CrashSosOverlay>
             const SizedBox(height: 16),
 
             const Text(
-              "CRITICAL IMPACT DETECTED",
+              'CRITICAL IMPACT DETECTED',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppTheme.redDanger,
@@ -126,7 +187,10 @@ class _CrashSosOverlayState extends State<CrashSosOverlay>
             const SizedBox(height: 8),
 
             Text(
-              "Inertial Shock: ${widget.detectedGForce.toStringAsFixed(1)}G (Threshold > 2.5G)",
+              'Inertial Shock: '
+              '${widget.detectedGForce.toStringAsFixed(1)}G '
+              '(Threshold > 2.5G)',
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white70,
                 fontSize: 13,
@@ -135,7 +199,6 @@ class _CrashSosOverlayState extends State<CrashSosOverlay>
             ),
             const SizedBox(height: 16),
 
-            // Status message
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -146,19 +209,30 @@ class _CrashSosOverlayState extends State<CrashSosOverlay>
               child: Column(
                 children: [
                   Text(
-                    _isDispatched
-                        ? "🚨 EMERGENCY SERVICES & SMS DISPATCHED!"
-                        : "Dispatching Emergency SOS in $_countdown Seconds",
+                    statusText,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _isDispatched ? AppTheme.amberWarning : Colors.white,
+                      color: statusColor,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 6),
+                  Text(
+                    _isWaiting
+                        ? 'Press “I AM OK” to cancel the countdown.'
+                        : 'DEMO ONLY — No SMS or phone call was sent.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppTheme.amberWarning,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
                   const Text(
-                    "GPS: 6.8402° N, 80.0034° E • NSBM Expressway Approach",
+                    'GPS: 6.8402° N, 80.0034° E • NSBM Expressway Approach',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppTheme.cyanAccent,
                       fontSize: 11,
@@ -170,16 +244,22 @@ class _CrashSosOverlayState extends State<CrashSosOverlay>
             ),
             const SizedBox(height: 18),
 
-            // Emergency Contacts Preview
             Row(
               children: [
-                const Icon(Icons.contact_phone_outlined,
-                    size: 16, color: AppTheme.textMuted),
+                const Icon(
+                  Icons.contact_phone_outlined,
+                  size: 16,
+                  color: AppTheme.textMuted,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    "Contact: ${driver.emergencyContactName} (${driver.emergencyContactPhone})",
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    'Contact: ${driver.emergencyContactName} '
+                    '(${driver.emergencyContactPhone})',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -187,31 +267,32 @@ class _CrashSosOverlayState extends State<CrashSosOverlay>
             ),
             const SizedBox(height: 20),
 
-            // Action Buttons
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    widget.onDismiss();
-                  },
+            if (_isWaiting) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _cancelSos,
                   icon: const Icon(Icons.check_circle_outline),
-                  label: Text("I AM OK - CANCEL SOS ($_countdown s)"),
+                  label: Text('I AM OK - CANCEL SOS ($_countdown s)'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    setState(() => _isDispatched = true);
-                    // TODO: Team Member: Trigger telephony / twilio / SMS intent here
-                  },
-                  icon: const Icon(Icons.emergency, color: AppTheme.redDanger),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _simulateDispatchNow,
+                  icon: const Icon(
+                    Icons.emergency,
+                    color: AppTheme.redDanger,
+                  ),
                   label: const Text(
-                    "DISPATCH NOW (POLICE 119 / AMBULANCE 1990)",
+                    'DISPATCH NOW (POLICE 119 / AMBULANCE 1990)',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppTheme.redDanger,
                       fontWeight: FontWeight.bold,
@@ -223,8 +304,15 @@ class _CrashSosOverlayState extends State<CrashSosOverlay>
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ] else
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: widget.onDismiss,
+                  child: const Text('CLOSE'),
+                ),
+              ),
           ],
         ),
       ),
