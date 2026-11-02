@@ -36,6 +36,8 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
   DateTime? _tripStartTime;
 
   final List<String> _tripEvents = [];
+  final List<TripRoutePoint> _routePoints = [];
+  final List<TripSafetyEvent> _safetyEvents = [];
 
   @override
   void dispose() {
@@ -55,6 +57,17 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
       _tripDistanceKm = 0;
       _tripStartTime = DateTime.now();
       _tripEvents.clear();
+      _safetyEvents.clear();
+
+      _routePoints
+        ..clear()
+        ..add(
+          const TripRoutePoint(
+            latitude: 6.8402,
+            longitude: 80.0034,
+          ),
+        );
+
       _drivingStatus = 'Trip in progress';
       _statusColor = AppTheme.greenEco;
       _safetyScore = 94;
@@ -91,6 +104,15 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
           _topSpeedKmh = _currentSpeed;
         }
 
+        // Create a sample route point near the starting coordinate.
+        final pointNumber = _routePoints.length;
+        _routePoints.add(
+          TripRoutePoint(
+            latitude: 6.8402 + (pointNumber * 0.0003),
+            longitude: 80.0034 + (pointNumber * 0.0002),
+          ),
+        );
+
         _gForce = 0.15 + (timer.tick % 3) * 0.08;
 
         if (_gForce > 0.3) {
@@ -123,13 +145,30 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
     final endTime = DateTime.now();
     final startTime = _tripStartTime ?? endTime;
     final durationHours = endTime.difference(startTime).inSeconds / 3600.0;
-    final averageSpeed = durationHours > 0
-        ? _tripDistanceKm / durationHours
-        : 0.0;
+    final averageSpeed =
+        durationHours > 0 ? _tripDistanceKm / durationHours : 0.0;
 
     final rapidAccelerationCount = _tripEvents
         .where((event) => event == 'Moderate acceleration detected')
         .length;
+
+    final eventLocation = _routePoints.isNotEmpty
+        ? _routePoints[_routePoints.length ~/ 2]
+        : const TripRoutePoint(
+            latitude: 6.8402,
+            longitude: 80.0034,
+          );
+
+    if (_tripEvents.isNotEmpty) {
+      _safetyEvents.add(
+        TripSafetyEvent(
+          title: 'Moderate acceleration',
+          description: 'Demo acceleration event detected during the trip.',
+          latitude: eventLocation.latitude,
+          longitude: eventLocation.longitude,
+        ),
+      );
+    }
 
     final completedTrip = TripModel(
       id: 'TRIP-${endTime.millisecondsSinceEpoch}',
@@ -144,6 +183,8 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
       rapidAccels: rapidAccelerationCount,
       sharpTurns: 0,
       estimatedFuelLiters: _tripDistanceKm * 0.06,
+      routePoints: List<TripRoutePoint>.unmodifiable(_routePoints),
+      safetyEvents: List<TripSafetyEvent>.unmodifiable(_safetyEvents),
     );
 
     MockDataService.addCompletedTrip(completedTrip);
@@ -194,7 +235,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                     ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Trip data and events are simulated for this demo.',
+                  'Trip data, route, and events are simulated for this demo.',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
