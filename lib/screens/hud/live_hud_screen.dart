@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../models/trip_model.dart';
 import '../../services/mock_data_service.dart';
@@ -22,6 +23,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
   int _safetyScore = 94;
   String _drivingStatus = 'Ready to drive';
   Color _statusColor = AppTheme.cyanAccent;
+  String _gpsStatus = 'Waiting for trip';
 
   bool _isDriving = false;
   bool _isBackgroundServiceActive =
@@ -29,7 +31,9 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
 
   Timer? _telemetrySimTimer;
   Timer? _tripTimer;
+  StreamSubscription<Position>? _positionSubscription;
 
+  Position? _lastPosition;
   int _elapsedSeconds = 0;
   double _tripDistanceKm = 0;
   double _topSpeedKmh = 0;
@@ -43,50 +47,170 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
   void dispose() {
     _telemetrySimTimer?.cancel();
     _tripTimer?.cancel();
+    _positionSubscription?.cancel();
     super.dispose();
   }
 
-  void _startDrive() {
+  Future<bool> _requestLocationPermission() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+    if (!serviceEnabled) {
+      _showMessage('Turn on location services, then try again.');
+      return false;
+    }
+
+    var permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied) {
+      _showMessage('Location permission was denied.');
+      return false;
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      _showMessage(
+        'Location permission is blocked. Enable it in your device settings.',
+      );
+      return false;
+    }
+
+    return permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always;
+  }
+
+  Future<void> _startDrive() async {
     if (_isDriving) return;
 
-    setState(() {
-      _isDriving = true;
-      _currentSpeed = 45;
-      _topSpeedKmh = 45;
-      _elapsedSeconds = 0;
-      _tripDistanceKm = 0;
-      _tripStartTime = DateTime.now();
-      _tripEvents.clear();
-      _safetyEvents.clear();
+    try {
+      final hasPermission = await _requestLocationPermission();
+      if (!hasPermission || !mounted) return;
 
-      _routePoints
-        ..clear()
-        ..add(
-          const TripRoutePoint(
-            latitude: 6.8402,
-            longitude: 80.0034,
-          ),
-        );
+      final initialPosition = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
 
-      _drivingStatus = 'Trip in progress';
-      _statusColor = AppTheme.greenEco;
-      _safetyScore = 94;
-    });
-
-    _startSimulatedTelemetry();
-
-    _tripTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted || !_isDriving) return;
+      if (!mounted) return;
 
       setState(() {
-        _elapsedSeconds++;
-        // Demo distance calculation based on the displayed speed.
-        _tripDistanceKm += _currentSpeed / 3600;
+        _isDriving = true;
+        _currentSpeed = _speedInKmh(initialPosition);
+        _topSpeedKmh = _currentSpeed;
+        _elapsedSeconds = 0;
+        _tripDistanceKm = 0;
+        _tripStartTime = DateTime.now();
+        _tripEvents.clear();
+        _safetyEvents.clear();
+        _lastPosition = initialPosition;
+
+        _routePoints
+          ..clear()
+          ..add(
+            TripRoutePoint(
+              latitude: initialPosition.latitude,
+              longitude: initialPosition.longitude,
+            ),
+          );
+
+        _drivingStatus = 'Trip in progress';
+        _statusColor = AppTheme.greenEco;
+        _safetyScore = 94;
+        _gpsStatus = 'GPS tracking active';
       });
+
+      _startLocationStream();
+      _startSimulatedAcceleration();
+
+      _tripTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted || !_isDriving) return;
+
+        setState(() {
+          _elapsedSeconds++;
+        });
+      });
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage('Could not get your location: $error');
+    }
+  }
+
+  double _speedInKmh(Position position) {
+    if (!position.speed.isFinite || position.speed < 0) return 0;
+    return position.speed * 3.6;
+  }
+
+  void _startLocationStream() {
+    _positionSubscription?.cancel();
+
+    _positionSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 1,
+      ),
+    ).listen(
+      _handlePosition,
+      onError: (Object error) {
+        if (!mounted) return;
+
+        setState(() {
+          _gpsStatus = 'GPS update unavailable';
+        });
+        _showMessage('GPS tracking error: $error');
+      },
+    );
+  }
+
+  void _handlePosition(Position position) {
+    if (!mounted || !_isDriving) return;
+
+    final previousPosition = _lastPosition;
+    var addedDistanceKm = 0.0;
+    var movedFromPreviousFix = false;
+
+    if (previousPosition != null) {
+      final distanceMeters = Geolocator.distanceBetween(
+        previousPosition.latitude,
+        previousPosition.longitude,
+        position.latitude,
+        position.longitude,
+      );
+
+      if (distanceMeters.isFinite && distanceMeters >= 0.5) {
+        addedDistanceKm = distanceMeters / 1000.0;
+        movedFromPreviousFix = true;
+      }
+    }
+
+    final speedKmh = _speedInKmh(position);
+
+    setState(() {
+      _lastPosition = position;
+      _tripDistanceKm += addedDistanceKm;
+      _currentSpeed = speedKmh;
+
+      if (speedKmh > _topSpeedKmh) {
+        _topSpeedKmh = speedKmh;
+      }
+
+      if (movedFromPreviousFix) {
+        _routePoints.add(
+          TripRoutePoint(
+            latitude: position.latitude,
+            longitude: position.longitude,
+          ),
+        );
+      }
+
+      _gpsStatus =
+          'GPS tracking active • Accuracy ±${position.accuracy.toStringAsFixed(0)} m';
     });
   }
 
-  void _startSimulatedTelemetry() {
+  void _startSimulatedAcceleration() {
     _telemetrySimTimer?.cancel();
 
     _telemetrySimTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
@@ -96,23 +220,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
       }
 
       setState(() {
-        _currentSpeed = (_currentSpeed + (timer.tick.isEven ? 2 : -1.5))
-            .clamp(35.0, 72.0)
-            .toDouble();
-
-        if (_currentSpeed > _topSpeedKmh) {
-          _topSpeedKmh = _currentSpeed;
-        }
-
-        // Create a sample route point near the starting coordinate.
-        final pointNumber = _routePoints.length;
-        _routePoints.add(
-          TripRoutePoint(
-            latitude: 6.8402 + (pointNumber * 0.0003),
-            longitude: 80.0034 + (pointNumber * 0.0002),
-          ),
-        );
-
+        // Acceleration is simulated; it is not read from a real motion sensor.
         _gForce = 0.15 + (timer.tick % 3) * 0.08;
 
         if (_gForce > 0.3) {
@@ -120,7 +228,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
           _statusColor = AppTheme.amberWarning;
           _recordTripEvent('Moderate acceleration detected');
         } else {
-          _drivingStatus = 'Smooth Driving';
+          _drivingStatus = 'Trip in progress';
           _statusColor = AppTheme.greenEco;
         }
 
@@ -130,21 +238,24 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
   }
 
   void _recordTripEvent(String event) {
-    // Keep one entry per event type in this demo.
     if (!_tripEvents.contains(event)) {
       _tripEvents.add(event);
     }
   }
 
-  void _endDrive() {
+  Future<void> _endDrive() async {
     if (!_isDriving) return;
 
     _telemetrySimTimer?.cancel();
     _tripTimer?.cancel();
 
+    await _positionSubscription?.cancel();
+    _positionSubscription = null;
+
     final endTime = DateTime.now();
     final startTime = _tripStartTime ?? endTime;
-    final durationHours = endTime.difference(startTime).inSeconds / 3600.0;
+    final duration = endTime.difference(startTime);
+    final durationHours = duration.inSeconds / 3600.0;
     final averageSpeed =
         durationHours > 0 ? _tripDistanceKm / durationHours : 0.0;
 
@@ -152,14 +263,9 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
         .where((event) => event == 'Moderate acceleration detected')
         .length;
 
-    final eventLocation = _routePoints.isNotEmpty
-        ? _routePoints[_routePoints.length ~/ 2]
-        : const TripRoutePoint(
-            latitude: 6.8402,
-            longitude: 80.0034,
-          );
+    if (_tripEvents.isNotEmpty && _routePoints.isNotEmpty) {
+      final eventLocation = _routePoints[_routePoints.length ~/ 2];
 
-    if (_tripEvents.isNotEmpty) {
       _safetyEvents.add(
         TripSafetyEvent(
           title: 'Moderate acceleration',
@@ -170,9 +276,15 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
       );
     }
 
+    // A duplicate point allows a preview line when GPS only returned one fix.
+    // It does not represent real movement.
+    if (_routePoints.length == 1) {
+      _routePoints.add(_routePoints.first);
+    }
+
     final completedTrip = TripModel(
       id: 'TRIP-${endTime.millisecondsSinceEpoch}',
-      routeName: 'Demo trip from current location',
+      routeName: 'GPS trip',
       startTime: startTime,
       endTime: endTime,
       distanceKm: _tripDistanceKm,
@@ -187,21 +299,24 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
       safetyEvents: List<TripSafetyEvent>.unmodifiable(_safetyEvents),
     );
 
-    MockDataService.addCompletedTrip(completedTrip);
+    await MockDataService.addCompletedTrip(completedTrip);
+    if (!mounted) return;
 
     setState(() {
       _isDriving = false;
       _currentSpeed = 0;
+      _lastPosition = null;
       _drivingStatus = 'Trip complete';
       _statusColor = AppTheme.cyanAccent;
+      _gpsStatus = 'GPS tracking stopped';
     });
 
-    _showTripSummary();
+    _showTripSummary(duration, averageSpeed);
   }
 
-  void _showTripSummary() {
-    final minutes = _elapsedSeconds ~/ 60;
-    final seconds = _elapsedSeconds % 60;
+  void _showTripSummary(Duration duration, double averageSpeed) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
     final eventsForSummary = List<String>.from(_tripEvents);
 
     showDialog<void>(
@@ -214,11 +329,13 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Demo trip completed.'),
+                const Text('Trip completed. Route and distance use GPS data.'),
                 const SizedBox(height: 16),
                 Text('Distance: ${_tripDistanceKm.toStringAsFixed(2)} km'),
                 Text('Duration: $minutes min $seconds sec'),
+                Text('Average speed: ${averageSpeed.toStringAsFixed(1)} km/h'),
                 Text('Safety score: $_safetyScore/100'),
+                Text('GPS route points: ${_routePoints.length}'),
                 const SizedBox(height: 16),
                 const Text(
                   'Driving Events',
@@ -231,15 +348,12 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                   for (final event in eventsForSummary)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 6),
-                      child: Text('•  $event'),
+                      child: Text('•  $event (simulated)'),
                     ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Trip data, route, and events are simulated for this demo.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+                  'Acceleration events are simulated. GPS data depends on device permission and signal.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
@@ -265,6 +379,14 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
     }
 
     return '${minutes}m ${seconds}s';
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -297,25 +419,23 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               BackgroundServiceCard(
-                title: 'Background Telematics Service',
-                description: _isBackgroundServiceActive
-                    ? 'Continuously sampling GPS velocity & IMU shock in background.'
-                    : 'Suspended. Telematics only active when app is on-screen.',
-                isRunning: _isBackgroundServiceActive,
+                title: 'Trip Location Tracking',
+                description: _isDriving
+                    ? 'Recording GPS route while this trip is active.'
+                    : 'Location tracking starts when you start a trip.',
+                isRunning: _isDriving,
                 activeColor: AppTheme.cyanAccent,
                 onToggle: (value) {
-                  setState(() {
-                    _isBackgroundServiceActive = value;
-                    MockDataService.isBackgroundTelematicsActive = value;
-                  });
+                  if (value && !_isDriving) {
+                    _startDrive();
+                  } else if (!value && _isDriving) {
+                    _endDrive();
+                  }
                 },
               ),
               const SizedBox(height: 16),
@@ -357,6 +477,15 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _gpsStatus,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppTheme.textMuted,
+                        fontSize: 11,
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -372,9 +501,9 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                           Icons.timer_outlined,
                         ),
                         _subStat(
-                          'HEADING',
-                          '042° NE',
-                          Icons.explore_outlined,
+                          'GPS POINTS',
+                          '${_routePoints.length}',
+                          Icons.location_on_outlined,
                         ),
                         _subStat(
                           'SAFETY',
@@ -435,7 +564,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Text(
-                              'DEMO',
+                              'GPS + DEMO SENSORS',
                               style: TextStyle(
                                 color: AppTheme.greenEco,
                                 fontSize: 10,
@@ -446,21 +575,18 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
+                      _pipelineRow('GPS Receiver', _gpsStatus),
                       _pipelineRow(
-                        'GPS Hardware Receiver',
-                        'Demo location • ±2.1m',
+                        'GPS-derived speed',
+                        '${_currentSpeed.toStringAsFixed(1)} km/h',
                       ),
                       _pipelineRow(
-                        'Linear User Accelerometer',
-                        'X: +0.04  Y: -0.18  Z: +0.02 m/s²',
+                        'Acceleration monitor',
+                        'Demo data • ${_gForce.toStringAsFixed(2)}G',
                       ),
                       _pipelineRow(
-                        'Gyroscope Yaw Stability',
-                        '0.02 rad/s • Demo data',
-                      ),
-                      _pipelineRow(
-                        'High-G Shock Trigger',
-                        'Armed (Threshold: > 2.5G Peak)',
+                        'Recorded GPS route points',
+                        '${_routePoints.length}',
                       ),
                       const Divider(
                         height: 20,
@@ -474,9 +600,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                           Icons.warning_amber_rounded,
                           color: Colors.black,
                         ),
-                        label: const Text(
-                          'TEST HARDWARE CRASH SOS POPUP',
-                        ),
+                        label: const Text('TEST HARDWARE CRASH SOS POPUP'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.amberWarning,
                           foregroundColor: Colors.black,
@@ -497,11 +621,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
   Widget _subStat(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(
-          icon,
-          color: AppTheme.textMuted,
-          size: 18,
-        ),
+        Icon(icon, color: AppTheme.textMuted, size: 18),
         const SizedBox(height: 4),
         Text(
           value,
@@ -530,11 +650,10 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            name,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
+          Expanded(
+            child: Text(
+              name,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
             ),
           ),
           const SizedBox(width: 12),

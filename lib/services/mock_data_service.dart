@@ -1,28 +1,153 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/driver_profile_model.dart';
 import '../models/hotspot_model.dart';
 import '../models/trip_model.dart';
-import 'package:flutter/foundation.dart';
 
-/// Centralized repository providing mock telemetry, active trip data,
-/// and background service hooks for team development.
+/// Stores demo data and completed trips for DriveSense.
 class MockDataService {
-  // Background service simulated states.
+  static const String _completedTripsKey = 'drivesense_completed_trips';
+
+  static final SharedPreferencesAsync _preferences = SharedPreferencesAsync();
+
   static bool isBackgroundTelematicsActive = true;
   static bool isBackgroundDrowsinessWatchdogActive = false;
   static bool isBackgroundLoggingActive = true;
 
-  // Completed trips created during this app session.
   static final List<TripModel> _completedTrips = [];
 
-  // Notifies screens when a completed trip is added.
+  /// Screens can listen to this and refresh when trips are added.
   static final ValueNotifier<int> tripsChanged = ValueNotifier<int>(0);
 
-  static void addCompletedTrip(TripModel trip) {
-    _completedTrips.insert(0, trip);
-    tripsChanged.value++;
+  /// Load saved trips before showing the app.
+  static Future<void> initialize() async {
+    try {
+      final savedJson = await _preferences.getString(_completedTripsKey);
+
+      if (savedJson == null || savedJson.isEmpty) return;
+
+      final decoded = jsonDecode(savedJson);
+      if (decoded is! List) return;
+
+      _completedTrips
+        ..clear()
+        ..addAll(
+          decoded
+              .whereType<Map>()
+              .map(
+                (item) => _tripFromJson(Map<String, dynamic>.from(item)),
+              ),
+        );
+
+      tripsChanged.value++;
+    } catch (error) {
+      debugPrint('Could not load saved trips: $error');
+    }
   }
 
-  // Active driver profile.
+  /// Add a trip to this session and save it on this device.
+  static Future<void> addCompletedTrip(TripModel trip) async {
+    _completedTrips.insert(0, trip);
+    tripsChanged.value++;
+
+    try {
+      final encodedTrips = jsonEncode(
+        _completedTrips.map(_tripToJson).toList(),
+      );
+      await _preferences.setString(_completedTripsKey, encodedTrips);
+    } catch (error) {
+      debugPrint('Could not save completed trip: $error');
+    }
+  }
+
+  static Map<String, dynamic> _tripToJson(TripModel trip) {
+    return {
+      'id': trip.id,
+      'routeName': trip.routeName,
+      'startTime': trip.startTime.toIso8601String(),
+      'endTime': trip.endTime.toIso8601String(),
+      'distanceKm': trip.distanceKm,
+      'avgSpeedKmh': trip.avgSpeedKmh,
+      'topSpeedKmh': trip.topSpeedKmh,
+      'ecoScore': trip.ecoScore,
+      'harshBrakes': trip.harshBrakes,
+      'rapidAccels': trip.rapidAccels,
+      'sharpTurns': trip.sharpTurns,
+      'estimatedFuelLiters': trip.estimatedFuelLiters,
+      'routePoints': trip.routePoints
+          .map(
+            (point) => {
+              'latitude': point.latitude,
+              'longitude': point.longitude,
+            },
+          )
+          .toList(),
+      'safetyEvents': trip.safetyEvents
+          .map(
+            (event) => {
+              'title': event.title,
+              'description': event.description,
+              'latitude': event.latitude,
+              'longitude': event.longitude,
+            },
+          )
+          .toList(),
+    };
+  }
+
+  static TripModel _tripFromJson(Map<String, dynamic> json) {
+    final routePointsJson = json['routePoints'];
+    final safetyEventsJson = json['safetyEvents'];
+
+    final routePoints = routePointsJson is List
+        ? routePointsJson
+              .whereType<Map>()
+              .map((item) {
+                final point = Map<String, dynamic>.from(item);
+                return TripRoutePoint(
+                  latitude: (point['latitude'] as num).toDouble(),
+                  longitude: (point['longitude'] as num).toDouble(),
+                );
+              })
+              .toList()
+        : <TripRoutePoint>[];
+
+    final safetyEvents = safetyEventsJson is List
+        ? safetyEventsJson
+              .whereType<Map>()
+              .map((item) {
+                final event = Map<String, dynamic>.from(item);
+                return TripSafetyEvent(
+                  title: event['title'] as String,
+                  description: event['description'] as String,
+                  latitude: (event['latitude'] as num).toDouble(),
+                  longitude: (event['longitude'] as num).toDouble(),
+                );
+              })
+              .toList()
+        : <TripSafetyEvent>[];
+
+    return TripModel(
+      id: json['id'] as String,
+      routeName: json['routeName'] as String,
+      startTime: DateTime.parse(json['startTime'] as String),
+      endTime: DateTime.parse(json['endTime'] as String),
+      distanceKm: (json['distanceKm'] as num).toDouble(),
+      avgSpeedKmh: (json['avgSpeedKmh'] as num).toDouble(),
+      topSpeedKmh: (json['topSpeedKmh'] as num).toDouble(),
+      ecoScore: (json['ecoScore'] as num).toInt(),
+      harshBrakes: (json['harshBrakes'] as num).toInt(),
+      rapidAccels: (json['rapidAccels'] as num).toInt(),
+      sharpTurns: (json['sharpTurns'] as num).toInt(),
+      estimatedFuelLiters: (json['estimatedFuelLiters'] as num).toDouble(),
+      routePoints: routePoints,
+      safetyEvents: safetyEvents,
+    );
+  }
+
   static DriverProfileModel currentDriver = DriverProfileModel(
     uid: 'DRV-90412',
     fullName: 'Diluka Wijesinghe',
@@ -38,7 +163,6 @@ class MockDataService {
     safetyTierBadge: 'Elite Safe Driver (Tier 1)',
   );
 
-  // Crash hotspots list.
   static List<CrashHotspotModel> getSampleHotspots() {
     return [
       CrashHotspotModel(
@@ -96,7 +220,6 @@ class MockDataService {
     ];
   }
 
-  // Recent trips for Eco-Drive & Analytics.
   static List<TripModel> getRecentTrips() {
     final sampleTrips = <TripModel>[
       TripModel(

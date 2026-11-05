@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'theme/app_theme.dart';
-import 'screens/auth/login_screen.dart';
 
-void main() {
+import 'screens/auth/login_screen.dart';
+import 'services/mock_data_service.dart';
+import 'theme/app_theme.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Ensure status bar styling matches the dark automotive theme
+
+  await MockDataService.initialize();
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -14,6 +18,7 @@ void main() {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
+
   runApp(const DriveSenseApp());
 }
 
