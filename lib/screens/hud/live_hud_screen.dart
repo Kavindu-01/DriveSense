@@ -31,6 +31,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
 
   Timer? _telemetrySimTimer;
   Timer? _tripTimer;
+  Timer? _demoRouteTimer;
   StreamSubscription<Position>? _positionSubscription;
 
   Position? _lastPosition;
@@ -38,6 +39,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
   double _tripDistanceKm = 0;
   double _topSpeedKmh = 0;
   DateTime? _tripStartTime;
+  int _demoRouteStep = 0;
 
   final List<String> _tripEvents = [];
   final List<TripRoutePoint> _routePoints = [];
@@ -47,6 +49,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
   void dispose() {
     _telemetrySimTimer?.cancel();
     _tripTimer?.cancel();
+    _demoRouteTimer?.cancel();
     _positionSubscription?.cancel();
     super.dispose();
   }
@@ -106,6 +109,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
         _tripEvents.clear();
         _safetyEvents.clear();
         _lastPosition = initialPosition;
+        _demoRouteStep = 0;
 
         _routePoints
           ..clear()
@@ -124,6 +128,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
 
       _startLocationStream();
       _startSimulatedAcceleration();
+      _startDemoRoute();
 
       _tripTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (!mounted || !_isDriving) return;
@@ -210,6 +215,27 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
     });
   }
 
+  void _startDemoRoute() {
+    _demoRouteTimer?.cancel();
+
+    _demoRouteTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted || !_isDriving || _routePoints.isEmpty) return;
+
+      final start = _routePoints.first;
+      _demoRouteStep++;
+
+      final simulatedPoint = TripRoutePoint(
+        latitude: start.latitude + (_demoRouteStep * 0.00015),
+        longitude: start.longitude + (_demoRouteStep * 0.00012),
+      );
+
+      setState(() {
+        _routePoints.add(simulatedPoint);
+        _gpsStatus = 'Demo route active • browser GPS may be fixed';
+      });
+    });
+  }
+
   void _startSimulatedAcceleration() {
     _telemetrySimTimer?.cancel();
 
@@ -248,6 +274,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
 
     _telemetrySimTimer?.cancel();
     _tripTimer?.cancel();
+    _demoRouteTimer?.cancel();
 
     await _positionSubscription?.cancel();
     _positionSubscription = null;
@@ -276,15 +303,9 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
       );
     }
 
-    // A duplicate point allows a preview line when GPS only returned one fix.
-    // It does not represent real movement.
-    if (_routePoints.length == 1) {
-      _routePoints.add(_routePoints.first);
-    }
-
     final completedTrip = TripModel(
       id: 'TRIP-${endTime.millisecondsSinceEpoch}',
-      routeName: 'GPS trip',
+      routeName: 'GPS trip (demo route)',
       startTime: startTime,
       endTime: endTime,
       distanceKm: _tripDistanceKm,
@@ -329,13 +350,15 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Trip completed. Route and distance use GPS data.'),
+                const Text(
+                  'Trip completed. Route points may include simulated demo data.',
+                ),
                 const SizedBox(height: 16),
                 Text('Distance: ${_tripDistanceKm.toStringAsFixed(2)} km'),
                 Text('Duration: $minutes min $seconds sec'),
                 Text('Average speed: ${averageSpeed.toStringAsFixed(1)} km/h'),
                 Text('Safety score: $_safetyScore/100'),
-                Text('GPS route points: ${_routePoints.length}'),
+                Text('Route points: ${_routePoints.length}'),
                 const SizedBox(height: 16),
                 const Text(
                   'Driving Events',
@@ -352,7 +375,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                     ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Acceleration events are simulated. GPS data depends on device permission and signal.',
+                  'Acceleration and demo route points may be simulated. Real GPS data depends on device permission and signal.',
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
@@ -426,7 +449,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
               BackgroundServiceCard(
                 title: 'Trip Location Tracking',
                 description: _isDriving
-                    ? 'Recording GPS route while this trip is active.'
+                    ? 'Recording GPS and demo route points while this trip is active.'
                     : 'Location tracking starts when you start a trip.',
                 isRunning: _isDriving,
                 activeColor: AppTheme.cyanAccent,
@@ -501,7 +524,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                           Icons.timer_outlined,
                         ),
                         _subStat(
-                          'GPS POINTS',
+                          'ROUTE POINTS',
                           '${_routePoints.length}',
                           Icons.location_on_outlined,
                         ),
@@ -585,7 +608,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                         'Demo data • ${_gForce.toStringAsFixed(2)}G',
                       ),
                       _pipelineRow(
-                        'Recorded GPS route points',
+                        'Recorded route points',
                         '${_routePoints.length}',
                       ),
                       const Divider(
