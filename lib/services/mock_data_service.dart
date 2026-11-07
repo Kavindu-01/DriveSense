@@ -21,9 +21,14 @@ class MockDataService {
 
   /// Screens can listen to this and refresh when trips are added.
   static final ValueNotifier<int> tripsChanged = ValueNotifier<int>(0);
+  static final ValueNotifier<int> driverChanged = ValueNotifier<int>(0);
+  static String? tripStorageError;
+  static bool tripsLoading = false;
 
   /// Load saved trips before showing the app.
   static Future<void> initialize() async {
+    tripsLoading = true;
+    tripStorageError = null;
     try {
       final savedJson = await _preferences.getString(_completedTripsKey);
 
@@ -39,10 +44,12 @@ class MockDataService {
             (item) => _tripFromJson(Map<String, dynamic>.from(item)),
           ),
         );
-
-      tripsChanged.value++;
     } catch (error) {
+      tripStorageError = 'Saved trip history could not be loaded.';
       debugPrint('Could not load saved trips: $error');
+    } finally {
+      tripsLoading = false;
+      tripsChanged.value++;
     }
   }
 
@@ -56,7 +63,11 @@ class MockDataService {
         _completedTrips.map(_tripToJson).toList(),
       );
       await _preferences.setString(_completedTripsKey, encodedTrips);
+      tripStorageError = null;
+      tripsChanged.value++;
     } catch (error) {
+      tripStorageError = 'This trip was added for this session but could not be saved on this device.';
+      tripsChanged.value++;
       debugPrint('Could not save completed trip: $error');
     }
   }
@@ -179,6 +190,35 @@ class MockDataService {
       totalTrips: 0,
       safetyTierBadge: 'New Driver (Demo)',
     );
+    driverChanged.value++;
+  }
+
+  /// Update the in-session demo profile from the profile editor.
+  static void updateDemoDriver({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String vehicleModel,
+    required String licensePlate,
+    required String emergencyContactName,
+    required String emergencyContactPhone,
+  }) {
+    final driver = currentDriver;
+    currentDriver = DriverProfileModel(
+      uid: driver.uid,
+      fullName: fullName,
+      email: email,
+      phone: phone,
+      vehicleModel: vehicleModel,
+      licensePlate: licensePlate,
+      emergencyContactName: emergencyContactName,
+      emergencyContactPhone: emergencyContactPhone,
+      overallSafetyScore: driver.overallSafetyScore,
+      totalLoggedKm: driver.totalLoggedKm,
+      totalTrips: driver.totalTrips,
+      safetyTierBadge: driver.safetyTierBadge,
+    );
+    driverChanged.value++;
   }
 
   static List<CrashHotspotModel> getSampleHotspots() {

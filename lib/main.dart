@@ -19,8 +19,8 @@ Future<void> main() async {
     ),
   );
 
-  runApp(const DriveSenseApp());
   unawaited(MockDataService.initialize());
+  runApp(const DriveSenseApp());
 }
 
 class DriveSenseApp extends StatelessWidget {

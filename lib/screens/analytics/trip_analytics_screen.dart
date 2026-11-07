@@ -14,6 +14,8 @@ class TripAnalyticsScreen extends StatefulWidget {
 
 class _TripAnalyticsScreenState extends State<TripAnalyticsScreen> {
   bool _isBackgroundLogging = MockDataService.isBackgroundLoggingActive;
+  bool _isRetryingStorage = false;
+  bool _isLoadingTrips = MockDataService.tripsLoading;
   List<TripModel> _trips = MockDataService.getRecentTrips();
 
   @override
@@ -24,7 +26,24 @@ class _TripAnalyticsScreenState extends State<TripAnalyticsScreen> {
 
   void _refreshTrips() {
     if (!mounted) return;
-    setState(() => _trips = MockDataService.getRecentTrips());
+    setState(() {
+      _trips = MockDataService.getRecentTrips();
+      _isLoadingTrips = MockDataService.tripsLoading;
+    });
+  }
+
+  Future<void> _retryTripStorage() async {
+    setState(() {
+      _isRetryingStorage = true;
+      _isLoadingTrips = true;
+    });
+    await MockDataService.initialize();
+    if (!mounted) return;
+    setState(() {
+      _isRetryingStorage = false;
+      _isLoadingTrips = false;
+      _trips = MockDataService.getRecentTrips();
+    });
   }
 
   @override
@@ -192,6 +211,47 @@ class _TripAnalyticsScreenState extends State<TripAnalyticsScreen> {
                   });
                 },
               ),
+              if (MockDataService.tripStorageError != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.amberWarning.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.amberWarning.withOpacity(0.4),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.cloud_off_outlined,
+                        color: AppTheme.amberWarning,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          MockDataService.tripStorageError!,
+                          style: TextStyle(color: Colors.white, fontSize: 12),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _isRetryingStorage
+                            ? null
+                            : _retryTripStorage,
+                        child: _isRetryingStorage
+                            ? const SizedBox.square(
+                                dimension: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('RETRY'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               const Text(
                 'DEMO SUMMARY · eco score and driving metrics use sample values.',
@@ -226,7 +286,25 @@ class _TripAnalyticsScreenState extends State<TripAnalyticsScreen> {
                 ],
               ),
               const SizedBox(height: 10),
-              if (_trips.isEmpty)
+              if (_isLoadingTrips)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 12),
+                          Text(
+                            'Loading trip history…',
+                            style: TextStyle(color: AppTheme.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              else if (_trips.isEmpty)
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(20),

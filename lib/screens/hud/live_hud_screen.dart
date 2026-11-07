@@ -26,6 +26,8 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
   String _gpsStatus = 'Waiting for trip';
 
   bool _isDriving = false;
+  bool _isStartingDrive = false;
+  String? _driveError;
   Timer? _telemetrySimTimer;
   Timer? _tripTimer;
   Timer? _demoRouteTimer;
@@ -55,7 +57,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
 
     if (!serviceEnabled) {
-      _showMessage('Turn on location services, then try again.');
+      _reportDriveError('Location services are off. Turn them on and retry.');
       return false;
     }
 
@@ -66,13 +68,15 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
     }
 
     if (permission == LocationPermission.denied) {
-      _showMessage('Location permission was denied.');
+      _reportDriveError(
+        'Location permission was denied. Allow access and retry.',
+      );
       return false;
     }
 
     if (permission == LocationPermission.deniedForever) {
-      _showMessage(
-        'Location permission is blocked. Enable it in your device settings.',
+      _reportDriveError(
+        'Location permission is blocked. Enable it in device settings and retry.',
       );
       return false;
     }
@@ -82,7 +86,11 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
   }
 
   Future<void> _startDrive() async {
-    if (_isDriving) return;
+    if (_isDriving || _isStartingDrive) return;
+    setState(() {
+      _isStartingDrive = true;
+      _driveError = null;
+    });
 
     try {
       final hasPermission = await _requestLocationPermission();
@@ -136,8 +144,16 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
       });
     } catch (error) {
       if (!mounted) return;
-      _showMessage('Could not get your location: $error');
+      _reportDriveError('Could not get your location. Check GPS and retry.');
+    } finally {
+      if (mounted) setState(() => _isStartingDrive = false);
     }
+  }
+
+  void _reportDriveError(String message) {
+    if (!mounted) return;
+    setState(() => _driveError = message);
+    _showMessage(message);
   }
 
   double _speedInKmh(Position position) {
@@ -451,7 +467,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                 description: _isDriving
                     ? 'Recording GPS and demo route points while this trip is active.'
                     : 'Location tracking starts when you start a trip.',
-                isRunning: _isDriving,
+                isRunning: _isDriving || _isStartingDrive,
                 activeColor: AppTheme.cyanAccent,
                 onToggle: (value) {
                   if (value && !_isDriving) {
@@ -461,6 +477,41 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                   }
                 },
               ),
+              if (_driveError != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.redDanger.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.redDanger.withOpacity(0.5),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.location_off_outlined,
+                        color: AppTheme.redDanger,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _driveError!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _startDrive,
+                        child: const Text('RETRY'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -540,11 +591,26 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: _isDriving ? _endDrive : _startDrive,
-                        icon: Icon(
-                          _isDriving ? Icons.stop_rounded : Icons.play_arrow,
+                        onPressed: _isStartingDrive
+                            ? null
+                            : (_isDriving ? _endDrive : _startDrive),
+                        icon: _isStartingDrive
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Icon(
+                                _isDriving
+                                    ? Icons.stop_rounded
+                                    : Icons.play_arrow,
+                              ),
+                        label: Text(
+                          _isStartingDrive
+                              ? 'GETTING LOCATION…'
+                              : (_isDriving ? 'END DRIVE' : 'START DRIVE'),
                         ),
-                        label: Text(_isDriving ? 'END DRIVE' : 'START DRIVE'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _isDriving
                               ? AppTheme.redDanger

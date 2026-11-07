@@ -3,9 +3,31 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/mock_data_service.dart';
 import '../auth/login_screen.dart';
+import 'edit_driver_profile_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    MockDataService.driverChanged.addListener(_refreshProfile);
+  }
+
+  @override
+  void dispose() {
+    MockDataService.driverChanged.removeListener(_refreshProfile);
+    super.dispose();
+  }
+
+  void _refreshProfile() {
+    if (mounted) setState(() {});
+  }
 
   void _handleLogout(BuildContext context) {
     showDialog(
@@ -53,6 +75,24 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text("Driver Profile & Telematics"),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Edit driver and vehicle profile',
+            onPressed: () async {
+              final updated = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(
+                  builder: (_) => EditDriverProfileScreen(driver: driver),
+                ),
+              );
+              if (updated == true && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Driver profile updated for this session.'),
+                  ),
+                );
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppTheme.redDanger),
             tooltip: "Log Out",

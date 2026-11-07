@@ -17,6 +17,40 @@ class _CrashHotspotsScreenState extends State<CrashHotspotsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_hotspots.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Crash hotspots')),
+        body: const SafeArea(
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.radar_outlined,
+                    color: AppTheme.purpleRadar,
+                    size: 40,
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'No hotspots available',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    'There are no sample risk locations to show right now.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppTheme.textMuted),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     final imminentHotspot = _hotspots.firstWhere(
       (h) => h.distanceMeters < 1000,
       orElse: () => _hotspots.first,
