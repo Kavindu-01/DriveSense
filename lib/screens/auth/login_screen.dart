@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../theme/app_theme.dart';
 import '../home_navigation_screen.dart';
 import 'register_screen.dart';
@@ -12,12 +13,14 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController(text: "diluka.w@nsbm.ac.lk");
-  final _passwordController = TextEditingController(text: "••••••••");
+  final _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   bool _rememberMe = true;
   bool _isLoading = false;
 
   void _handleLogin() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _isLoading = true);
 
     // Simulate authentication latency
@@ -25,7 +28,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (mounted) {
       setState(() => _isLoading = false);
-      // TODO: Team Member: Integrate FirebaseAuth.signInWithEmailAndPassword() here
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeNavigationScreen()),
       );
@@ -86,70 +88,141 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Text(
                   "Intelligent Driver Safety & Telematics Suite",
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppTheme.textMuted,
-                    fontSize: 13,
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.amberWarning.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppTheme.amberWarning.withOpacity(0.35),
+                      ),
+                    ),
+                    child: const Text(
+                      "DEMO MODE · no account required",
+                      style: TextStyle(
+                        color: AppTheme.amberWarning,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 36),
+                const SizedBox(height: 28),
 
                 // Email Input
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: "Driver Email / Employee ID",
-                    labelStyle: const TextStyle(color: AppTheme.textMuted),
-                    prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.cyanAccent),
-                    filled: true,
-                    fillColor: AppTheme.surfaceDark,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.borderSubtle),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.borderSubtle),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.cyanAccent, width: 2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Password Input
-                TextField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: "Security Password",
-                    labelStyle: const TextStyle(color: AppTheme.textMuted),
-                    prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.cyanAccent),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                        color: AppTheme.textMuted,
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        validator: (value) {
+                          final email = value?.trim() ?? '';
+                          if (email.isEmpty ||
+                              !email.contains('@') ||
+                              !email.contains('.')) {
+                            return 'Enter a valid email address';
+                          }
+                          return null;
+                        },
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: "Driver Email / Employee ID",
+                          labelStyle: const TextStyle(
+                            color: AppTheme.textMuted,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.email_outlined,
+                            color: AppTheme.cyanAccent,
+                          ),
+                          filled: true,
+                          fillColor: AppTheme.surfaceDark,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: AppTheme.borderSubtle,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: AppTheme.borderSubtle,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: AppTheme.cyanAccent,
+                              width: 2,
+                            ),
+                          ),
+                        ),
                       ),
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                    ),
-                    filled: true,
-                    fillColor: AppTheme.surfaceDark,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.borderSubtle),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.borderSubtle),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.cyanAccent, width: 2),
-                    ),
+                      const SizedBox(height: 16),
+
+                      // Password Input
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _handleLogin(),
+                        validator: (value) => (value?.trim().isEmpty ?? true)
+                            ? 'Enter your password'
+                            : null,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: "Security Password",
+                          labelStyle: const TextStyle(
+                            color: AppTheme.textMuted,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.lock_outline,
+                            color: AppTheme.cyanAccent,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: AppTheme.textMuted,
+                            ),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: AppTheme.surfaceDark,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: AppTheme.borderSubtle,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: AppTheme.borderSubtle,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: AppTheme.cyanAccent,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -158,30 +231,54 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _rememberMe,
-                          activeColor: AppTheme.cyanAccent,
-                          checkColor: Colors.black,
-                          onChanged: (val) => setState(() => _rememberMe = val ?? false),
+                    Flexible(
+                      child: InkWell(
+                        onTap: () => setState(() => _rememberMe = !_rememberMe),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Checkbox(
+                              value: _rememberMe,
+                              activeColor: AppTheme.cyanAccent,
+                              checkColor: Colors.black,
+                              onChanged: (val) =>
+                                  setState(() => _rememberMe = val ?? false),
+                            ),
+                            const Flexible(
+                              child: Text(
+                                "Remember Device",
+                                style: TextStyle(
+                                  color: AppTheme.textMuted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const Text(
-                          "Remember Device",
-                          style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
-                        ),
-                      ],
+                      ),
                     ),
                     TextButton(
                       onPressed: () {
-                        // TODO: Team Member: Implement Forgot Password reset email
+                        final email = _emailController.text.trim();
+                        final validEmail =
+                            email.contains('@') && email.contains('.');
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Password reset link sent to registered email.")),
+                          SnackBar(
+                            content: Text(
+                              validEmail
+                                  ? "Password recovery isn’t available in demo mode."
+                                  : "Enter a valid email address first.",
+                            ),
+                          ),
                         );
                       },
                       child: const Text(
                         "Forgot Password?",
-                        style: TextStyle(color: AppTheme.cyanAccent, fontSize: 12),
+                        style: TextStyle(
+                          color: AppTheme.cyanAccent,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -195,7 +292,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
                         )
                       : const Text("ACCESS DRIVER PORTAL"),
                 ),
@@ -212,7 +312,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     GestureDetector(
                       onTap: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterScreen(),
+                          ),
                         );
                       },
                       child: const Text(

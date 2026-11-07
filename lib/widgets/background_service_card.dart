@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_theme.dart';
 
 /// Reusable banner card displaying whether the module's background
@@ -27,7 +28,9 @@ class BackgroundServiceCard extends StatelessWidget {
         color: AppTheme.surfaceDark,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isRunning ? activeColor.withOpacity(0.5) : AppTheme.borderSubtle,
+          color: isRunning
+              ? activeColor.withOpacity(0.5)
+              : AppTheme.borderSubtle,
           width: 1.5,
         ),
       ),
@@ -36,7 +39,9 @@ class BackgroundServiceCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: (isRunning ? activeColor : AppTheme.textMuted).withOpacity(0.15),
+              color: (isRunning ? activeColor : AppTheme.textMuted).withOpacity(
+                0.15,
+              ),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -50,19 +55,26 @@ class BackgroundServiceCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  runSpacing: 4,
                   children: [
                     Text(
                       title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: isRunning
                             ? AppTheme.greenEco.withOpacity(0.2)
@@ -70,9 +82,11 @@ class BackgroundServiceCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isRunning ? "ACTIVE" : "STANDBY",
+                        isRunning ? "PREVIEW ON" : "PAUSED",
                         style: TextStyle(
-                          color: isRunning ? AppTheme.greenEco : AppTheme.textMuted,
+                          color: isRunning
+                              ? AppTheme.greenEco
+                              : AppTheme.textMuted,
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
                         ),
@@ -91,14 +105,14 @@ class BackgroundServiceCard extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
-            value: isRunning,
-            activeColor: activeColor,
-            onChanged: (val) {
-              onToggle(val);
-              // TODO: Team Member: Invoke native background service start/stop here
-              // e.g. FlutterBackgroundService().startService() / invoke("stopService")
-            },
+          Semantics(
+            label: '$title preview',
+            value: isRunning ? 'Enabled' : 'Paused',
+            child: Switch(
+              value: isRunning,
+              activeColor: activeColor,
+              onChanged: onToggle,
+            ),
           ),
         ],
       ),

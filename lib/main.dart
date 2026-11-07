@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -7,8 +9,6 @@ import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await MockDataService.initialize();
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -20,6 +20,7 @@ Future<void> main() async {
   );
 
   runApp(const DriveSenseApp());
+  unawaited(MockDataService.initialize());
 }
 
 class DriveSenseApp extends StatelessWidget {

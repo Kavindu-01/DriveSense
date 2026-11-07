@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_theme.dart';
 import 'hud/live_hud_screen.dart';
 import 'drowsiness/drowsiness_monitor_screen.dart';
@@ -28,10 +29,7 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           border: Border(
@@ -39,6 +37,9 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
           ),
         ),
         child: BottomNavigationBar(
+          selectedFontSize: 11,
+          unselectedFontSize: 10,
+          iconSize: 22,
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
           items: const [
@@ -60,7 +61,7 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
             BottomNavigationBarItem(
               icon: Icon(Icons.eco_outlined),
               activeIcon: Icon(Icons.eco, color: AppTheme.greenEco),
-              label: "Eco-Drive",
+              label: "Analytics",
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),

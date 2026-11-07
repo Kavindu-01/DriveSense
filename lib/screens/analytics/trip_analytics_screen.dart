@@ -47,12 +47,24 @@ class _TripAnalyticsScreenState extends State<TripAnalyticsScreen> {
               children: [
                 _TripRoutePreview(trip: trip),
                 const SizedBox(height: 16),
-                _detailRow('Distance', '${trip.distanceKm.toStringAsFixed(2)} km'),
+                _detailRow(
+                  'Distance',
+                  '${trip.distanceKm.toStringAsFixed(2)} km',
+                ),
                 _detailRow('Duration', '${trip.duration.inMinutes} min'),
-                _detailRow('Average speed', '${trip.avgSpeedKmh.toStringAsFixed(0)} km/h'),
-                _detailRow('Top speed', '${trip.topSpeedKmh.toStringAsFixed(0)} km/h'),
+                _detailRow(
+                  'Average speed',
+                  '${trip.avgSpeedKmh.toStringAsFixed(0)} km/h',
+                ),
+                _detailRow(
+                  'Top speed',
+                  '${trip.topSpeedKmh.toStringAsFixed(0)} km/h',
+                ),
                 _detailRow('Eco score', '${trip.ecoScore}/100'),
-                _detailRow('Estimated fuel', '${trip.estimatedFuelLiters.toStringAsFixed(1)} L'),
+                _detailRow(
+                  'Estimated fuel',
+                  '${trip.estimatedFuelLiters.toStringAsFixed(1)} L',
+                ),
                 const SizedBox(height: 16),
                 const Text(
                   'SAFETY EVENTS',
@@ -103,10 +115,7 @@ class _TripAnalyticsScreenState extends State<TripAnalyticsScreen> {
                 const SizedBox(height: 8),
                 const Text(
                   'Route and event data may be simulated for this demo.',
-                  style: TextStyle(
-                    color: AppTheme.textMuted,
-                    fontSize: 11,
-                  ),
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 11),
                 ),
               ],
             ),
@@ -153,7 +162,13 @@ class _TripAnalyticsScreenState extends State<TripAnalyticsScreen> {
           children: [
             Icon(Icons.eco_rounded, color: AppTheme.greenEco, size: 22),
             SizedBox(width: 8),
-            Text('Trip Analytics & Eco-Drive'),
+            Expanded(
+              child: Text(
+                'Trip Analytics & Eco-Drive',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
       ),
@@ -166,8 +181,8 @@ class _TripAnalyticsScreenState extends State<TripAnalyticsScreen> {
               BackgroundServiceCard(
                 title: 'Background Trip Logger',
                 description: _isBackgroundLogging
-                    ? 'Recording GPS waypoints, fuel economy & harsh events in background.'
-                    : 'Logging paused. Trip data only records while app is in foreground.',
+                    ? 'Demo logger enabled. Background recording is not connected.'
+                    : 'Demo logger paused. Existing trip history is still available.',
                 isRunning: _isBackgroundLogging,
                 activeColor: AppTheme.greenEco,
                 onToggle: (value) {
@@ -178,6 +193,12 @@ class _TripAnalyticsScreenState extends State<TripAnalyticsScreen> {
                 },
               ),
               const SizedBox(height: 16),
+              const Text(
+                'DEMO SUMMARY · eco score and driving metrics use sample values.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppTheme.textMuted, fontSize: 11),
+              ),
+              const SizedBox(height: 10),
               _buildEcoScoreCard(overallEcoScore),
               const SizedBox(height: 16),
               _buildMetricsCard(),
@@ -206,12 +227,31 @@ class _TripAnalyticsScreenState extends State<TripAnalyticsScreen> {
               ),
               const SizedBox(height: 10),
               if (_trips.isEmpty)
-                const Card(
+                Card(
                   child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                      'No trips recorded yet.',
-                      style: TextStyle(color: AppTheme.textMuted),
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.route_outlined,
+                          color: AppTheme.cyanAccent,
+                          size: 32,
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'No trips recorded yet',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Start a drive from Live HUD to build your trip history.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppTheme.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 )
@@ -229,10 +269,7 @@ class _TripAnalyticsScreenState extends State<TripAnalyticsScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppTheme.greenEco.withOpacity(0.18),
-            AppTheme.surfaceDark,
-          ],
+          colors: [AppTheme.greenEco.withOpacity(0.18), AppTheme.surfaceDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -336,8 +373,9 @@ class _TripAnalyticsScreenState extends State<TripAnalyticsScreen> {
               AppTheme.amberWarning,
             ),
             const Divider(height: 24, color: AppTheme.borderSubtle),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            const Wrap(
+              alignment: WrapAlignment.spaceAround,
+              runSpacing: 12,
               children: [
                 _EventPill(
                   title: 'Harsh Brakes',
@@ -399,17 +437,15 @@ class _TripAnalyticsScreenState extends State<TripAnalyticsScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                runSpacing: 12,
                 children: [
                   _tripInfoItem(
                     'Distance',
                     '${trip.distanceKm.toStringAsFixed(2)} km',
                   ),
-                  _tripInfoItem(
-                    'Duration',
-                    '${trip.duration.inMinutes} mins',
-                  ),
+                  _tripInfoItem('Duration', '${trip.duration.inMinutes} mins'),
                   _tripInfoItem(
                     'Avg Speed',
                     '${trip.avgSpeedKmh.toStringAsFixed(0)} km/h',
@@ -478,24 +514,27 @@ class _TripAnalyticsScreenState extends State<TripAnalyticsScreen> {
   }
 
   Widget _tripInfoItem(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(color: AppTheme.textMuted, fontSize: 10),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 11,
-            fontFamily: 'monospace',
+    return SizedBox(
+      width: (MediaQuery.sizeOf(context).width - 76) / 2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: AppTheme.textMuted, fontSize: 10),
           ),
-        ),
-      ],
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+              fontFamily: 'monospace',
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -590,18 +629,18 @@ class _TripRoutePainter extends CustomPainter {
     final usableWidth = size.width - padding * 2;
     final usableHeight = size.height - padding * 2;
 
-    final minLat = points.map((p) => p.latitude).reduce(
-          (a, b) => a < b ? a : b,
-        );
-    final maxLat = points.map((p) => p.latitude).reduce(
-          (a, b) => a > b ? a : b,
-        );
-    final minLon = points.map((p) => p.longitude).reduce(
-          (a, b) => a < b ? a : b,
-        );
-    final maxLon = points.map((p) => p.longitude).reduce(
-          (a, b) => a > b ? a : b,
-        );
+    final minLat = points
+        .map((p) => p.latitude)
+        .reduce((a, b) => a < b ? a : b);
+    final maxLat = points
+        .map((p) => p.latitude)
+        .reduce((a, b) => a > b ? a : b);
+    final minLon = points
+        .map((p) => p.longitude)
+        .reduce((a, b) => a < b ? a : b);
+    final maxLon = points
+        .map((p) => p.longitude)
+        .reduce((a, b) => a > b ? a : b);
 
     final latRange = maxLat - minLat;
     final lonRange = maxLon - minLon;

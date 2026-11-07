@@ -10,8 +10,12 @@ class AppTheme {
 
   // Neon & Telematics Accents
   static const Color cyanAccent = Color(0xFF00E5FF); // HUD Speedometer
-  static const Color amberWarning = Color(0xFFFFB300); // Cautions & Harsh Acceleration
-  static const Color redDanger = Color(0xFFFF3D00); // Crash SOS & Drowsiness Alert
+  static const Color amberWarning = Color(
+    0xFFFFB300,
+  ); // Cautions & Harsh Acceleration
+  static const Color redDanger = Color(
+    0xFFFF3D00,
+  ); // Crash SOS & Drowsiness Alert
   static const Color greenEco = Color(0xFF00E676); // Eco-Score & Safe Status
   static const Color purpleRadar = Color(0xFF7C4DFF); // Crash Hotspots
   static const Color textMuted = Color(0xFF8B949E);
@@ -38,6 +42,16 @@ class AppTheme {
           fontWeight: FontWeight.bold,
           letterSpacing: 0.5,
         ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        errorMaxLines: 2,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        labelStyle: const TextStyle(color: textMuted),
+        helperStyle: const TextStyle(color: textMuted, fontSize: 12),
+        errorStyle: const TextStyle(fontSize: 12),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: surfaceDark,

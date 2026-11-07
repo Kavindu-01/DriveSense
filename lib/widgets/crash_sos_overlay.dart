@@ -19,10 +19,7 @@ class CrashSosOverlay extends StatefulWidget {
   });
 
   /// Opens the dialog from anywhere in the app.
-  static Future<void> show(
-    BuildContext context, {
-    double gForce = 3.4,
-  }) {
+  static Future<void> show(BuildContext context, {double gForce = 3.4}) {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -127,25 +124,19 @@ class _CrashSosOverlayState extends State<CrashSosOverlay>
       statusText = 'DEMO: SOS dispatch simulated.';
       statusColor = AppTheme.amberWarning;
     } else {
-      statusText = 'Emergency SOS will be sent in $_countdown seconds.';
+      statusText = 'Demo alert will dispatch in $_countdown seconds.';
       statusColor = Colors.white;
     }
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 24,
-      ),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: const Color(0xFF1F0B0B),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: AppTheme.redDanger,
-            width: 2,
-          ),
+          border: Border.all(color: AppTheme.redDanger, width: 2),
           boxShadow: [
             BoxShadow(
               color: AppTheme.redDanger.withOpacity(0.4),
@@ -256,10 +247,7 @@ class _CrashSosOverlayState extends State<CrashSosOverlay>
                   child: Text(
                     'Contact: ${driver.emergencyContactName} '
                     '(${driver.emergencyContactPhone})',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -286,12 +274,9 @@ class _CrashSosOverlayState extends State<CrashSosOverlay>
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: _simulateDispatchNow,
-                  icon: const Icon(
-                    Icons.emergency,
-                    color: AppTheme.redDanger,
-                  ),
+                  icon: const Icon(Icons.emergency, color: AppTheme.redDanger),
                   label: const Text(
-                    'DISPATCH NOW (POLICE 119 / AMBULANCE 1990)',
+                    'DEMO DISPATCH (NO CALL PLACED)',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppTheme.redDanger,

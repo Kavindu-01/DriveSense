@@ -26,9 +26,6 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
   String _gpsStatus = 'Waiting for trip';
 
   bool _isDriving = false;
-  bool _isBackgroundServiceActive =
-      MockDataService.isBackgroundTelematicsActive;
-
   Timer? _telemetrySimTimer;
   Timer? _tripTimer;
   Timer? _demoRouteTimer;
@@ -151,22 +148,23 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
   void _startLocationStream() {
     _positionSubscription?.cancel();
 
-    _positionSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 1,
-      ),
-    ).listen(
-      _handlePosition,
-      onError: (Object error) {
-        if (!mounted) return;
+    _positionSubscription =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 1,
+          ),
+        ).listen(
+          _handlePosition,
+          onError: (Object error) {
+            if (!mounted) return;
 
-        setState(() {
-          _gpsStatus = 'GPS update unavailable';
-        });
-        _showMessage('GPS tracking error: $error');
-      },
-    );
+            setState(() {
+              _gpsStatus = 'GPS update unavailable';
+            });
+            _showMessage('GPS tracking error: $error');
+          },
+        );
   }
 
   void _handlePosition(Position position) {
@@ -283,8 +281,9 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
     final startTime = _tripStartTime ?? endTime;
     final duration = endTime.difference(startTime);
     final durationHours = duration.inSeconds / 3600.0;
-    final averageSpeed =
-        durationHours > 0 ? _tripDistanceKm / durationHours : 0.0;
+    final averageSpeed = durationHours > 0
+        ? _tripDistanceKm / durationHours
+        : 0.0;
 
     final rapidAccelerationCount = _tripEvents
         .where((event) => event == 'Moderate acceleration detected')
@@ -407,9 +406,8 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
   void _showMessage(String message) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -418,13 +416,15 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
       appBar: AppBar(
         title: const Row(
           children: [
-            Icon(
-              Icons.speed_rounded,
-              color: AppTheme.cyanAccent,
-              size: 22,
-            ),
+            Icon(Icons.speed_rounded, color: AppTheme.cyanAccent, size: 22),
             SizedBox(width: 8),
-            Text('Live Telematics HUD'),
+            Expanded(
+              child: Text(
+                'Live HUD · demo sensors',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         actions: [
@@ -510,8 +510,9 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    Wrap(
+                      alignment: WrapAlignment.spaceAround,
+                      runSpacing: 16,
                       children: [
                         _subStat(
                           'TRIP DIST',
@@ -524,7 +525,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                           Icons.timer_outlined,
                         ),
                         _subStat(
-                          'ROUTE POINTS',
+                          'GPS POINTS',
                           '${_routePoints.length}',
                           Icons.location_on_outlined,
                         ),
@@ -543,9 +544,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                         icon: Icon(
                           _isDriving ? Icons.stop_rounded : Icons.play_arrow,
                         ),
-                        label: Text(
-                          _isDriving ? 'END DRIVE' : 'START DRIVE',
-                        ),
+                        label: Text(_isDriving ? 'END DRIVE' : 'START DRIVE'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _isDriving
                               ? AppTheme.redDanger
@@ -611,10 +610,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                         'Recorded route points',
                         '${_routePoints.length}',
                       ),
-                      const Divider(
-                        height: 20,
-                        color: AppTheme.borderSubtle,
-                      ),
+                      const Divider(height: 20, color: AppTheme.borderSubtle),
                       ElevatedButton.icon(
                         onPressed: () {
                           CrashSosOverlay.show(context, gForce: 3.4);
@@ -623,7 +619,7 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
                           Icons.warning_amber_rounded,
                           color: Colors.black,
                         ),
-                        label: const Text('TEST HARDWARE CRASH SOS POPUP'),
+                        label: const Text('PREVIEW CRASH SOS'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.amberWarning,
                           foregroundColor: Colors.black,
@@ -642,28 +638,31 @@ class _LiveHudScreenState extends State<LiveHudScreen> {
   }
 
   Widget _subStat(String label, String value, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, color: AppTheme.textMuted, size: 18),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-            fontFamily: 'monospace',
+    return SizedBox(
+      width: (MediaQuery.sizeOf(context).width - 64) / 2,
+      child: Column(
+        children: [
+          Icon(icon, color: AppTheme.textMuted, size: 18),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              fontFamily: 'monospace',
+            ),
           ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppTheme.textMuted,
-            fontSize: 9,
-            fontWeight: FontWeight.w600,
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppTheme.textMuted,
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../theme/app_theme.dart';
 import '../../services/mock_data_service.dart';
 import '../../widgets/background_service_card.dart';
@@ -7,7 +8,8 @@ class DrowsinessMonitorScreen extends StatefulWidget {
   const DrowsinessMonitorScreen({super.key});
 
   @override
-  State<DrowsinessMonitorScreen> createState() => _DrowsinessMonitorScreenState();
+  State<DrowsinessMonitorScreen> createState() =>
+      _DrowsinessMonitorScreenState();
 }
 
 class _DrowsinessMonitorScreenState extends State<DrowsinessMonitorScreen> {
@@ -45,9 +47,19 @@ class _DrowsinessMonitorScreenState extends State<DrowsinessMonitorScreen> {
       appBar: AppBar(
         title: const Row(
           children: [
-            Icon(Icons.visibility_outlined, color: AppTheme.amberWarning, size: 22),
+            Icon(
+              Icons.visibility_outlined,
+              color: AppTheme.amberWarning,
+              size: 22,
+            ),
             SizedBox(width: 8),
-            Text("Driver Fatigue & Drowsiness AI"),
+            Expanded(
+              child: Text(
+                "Driver Fatigue & Drowsiness AI",
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
       ),
@@ -61,8 +73,8 @@ class _DrowsinessMonitorScreenState extends State<DrowsinessMonitorScreen> {
               BackgroundServiceCard(
                 title: "Tiered Background Watchdog",
                 description: _isBackgroundWatchdogActive
-                    ? "Battery-optimized: IMU swerve triggers 1 FPS camera bursts in background."
-                    : "Standby. Background camera sampling inactive.",
+                    ? "Preview enabled. Native background camera monitoring is not connected."
+                    : "Preview paused. Native background camera monitoring is not connected.",
                 isRunning: _isBackgroundWatchdogActive,
                 activeColor: AppTheme.amberWarning,
                 onToggle: (val) {
@@ -70,8 +82,29 @@ class _DrowsinessMonitorScreenState extends State<DrowsinessMonitorScreen> {
                     _isBackgroundWatchdogActive = val;
                     MockDataService.isBackgroundDrowsinessWatchdogActive = val;
                   });
-                  // TODO: Team Member: Connect battery-saving background camera service
                 },
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 9,
+                ),
+                decoration: BoxDecoration(
+                  color: AppTheme.amberWarning.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppTheme.amberWarning.withOpacity(0.3),
+                  ),
+                ),
+                child: const Text(
+                  'DEMO DATA · camera, biometrics, lighting, and alerts are simulated.',
+                  style: TextStyle(
+                    color: AppTheme.amberWarning,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -82,7 +115,9 @@ class _DrowsinessMonitorScreenState extends State<DrowsinessMonitorScreen> {
                   color: Colors.black,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: _isEyesClosedSimulated ? AppTheme.redDanger : AppTheme.borderSubtle,
+                    color: _isEyesClosedSimulated
+                        ? AppTheme.redDanger
+                        : AppTheme.borderSubtle,
                     width: 2,
                   ),
                 ),
@@ -95,10 +130,11 @@ class _DrowsinessMonitorScreenState extends State<DrowsinessMonitorScreen> {
                           ? Icons.face_retouching_off_outlined
                           : Icons.face_outlined,
                       size: 140,
-                      color: (_isEyesClosedSimulated
-                              ? AppTheme.redDanger
-                              : AppTheme.cyanAccent)
-                          .withOpacity(0.4),
+                      color:
+                          (_isEyesClosedSimulated
+                                  ? AppTheme.redDanger
+                                  : AppTheme.cyanAccent)
+                              .withOpacity(0.4),
                     ),
 
                     // Facial Mesh Bounding Box Overlay
@@ -122,7 +158,10 @@ class _DrowsinessMonitorScreenState extends State<DrowsinessMonitorScreen> {
                       top: 14,
                       left: 14,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black54,
                           borderRadius: BorderRadius.circular(12),
@@ -133,8 +172,11 @@ class _DrowsinessMonitorScreenState extends State<DrowsinessMonitorScreen> {
                             Icon(Icons.circle, color: _alertColor, size: 8),
                             const SizedBox(width: 6),
                             const Text(
-                              "Front Infrared Camera Stream",
-                              style: TextStyle(color: Colors.white, fontSize: 11),
+                              "Camera preview · simulated",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                              ),
                             ),
                           ],
                         ),
@@ -145,7 +187,10 @@ class _DrowsinessMonitorScreenState extends State<DrowsinessMonitorScreen> {
                     Positioned(
                       bottom: 14,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: _alertColor.withOpacity(0.9),
                           borderRadius: BorderRadius.circular(20),
@@ -192,7 +237,9 @@ class _DrowsinessMonitorScreenState extends State<DrowsinessMonitorScreen> {
                           Text(
                             "${_earScore.toStringAsFixed(2)} (Safe > 0.22)",
                             style: TextStyle(
-                              color: _earScore < 0.22 ? AppTheme.redDanger : AppTheme.greenEco,
+                              color: _earScore < 0.22
+                                  ? AppTheme.redDanger
+                                  : AppTheme.greenEco,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'monospace',
                             ),
@@ -206,7 +253,9 @@ class _DrowsinessMonitorScreenState extends State<DrowsinessMonitorScreen> {
                           value: (_earScore / 0.45).clamp(0.0, 1.0),
                           backgroundColor: AppTheme.borderSubtle,
                           valueColor: AlwaysStoppedAnimation(
-                            _earScore < 0.22 ? AppTheme.redDanger : AppTheme.cyanAccent,
+                            _earScore < 0.22
+                                ? AppTheme.redDanger
+                                : AppTheme.cyanAccent,
                           ),
                           minHeight: 8,
                         ),
@@ -217,9 +266,21 @@ class _DrowsinessMonitorScreenState extends State<DrowsinessMonitorScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _miniStat("BLINK FREQ", "$_blinkRatePerMin / min", Icons.remove_red_eye_outlined),
-                          _miniStat("HEAD PITCH", "${_headPitchAngle.toStringAsFixed(1)}°", Icons.airline_seat_recline_normal),
-                          _miniStat("LIGHTING", "340 Lux", Icons.wb_sunny_outlined),
+                          _miniStat(
+                            "BLINK FREQ",
+                            "$_blinkRatePerMin / min",
+                            Icons.remove_red_eye_outlined,
+                          ),
+                          _miniStat(
+                            "HEAD PITCH",
+                            "${_headPitchAngle.toStringAsFixed(1)}°",
+                            Icons.airline_seat_recline_normal,
+                          ),
+                          _miniStat(
+                            "LIGHTING",
+                            "Demo",
+                            Icons.wb_sunny_outlined,
+                          ),
                         ],
                       ),
                       const Divider(height: 24, color: AppTheme.borderSubtle),
@@ -231,11 +292,17 @@ class _DrowsinessMonitorScreenState extends State<DrowsinessMonitorScreen> {
                             child: OutlinedButton.icon(
                               onPressed: _simulateFatigueState,
                               icon: Icon(
-                                _isEyesClosedSimulated ? Icons.refresh : Icons.warning_amber_rounded,
-                                color: _isEyesClosedSimulated ? Colors.white : AppTheme.amberWarning,
+                                _isEyesClosedSimulated
+                                    ? Icons.refresh
+                                    : Icons.warning_amber_rounded,
+                                color: _isEyesClosedSimulated
+                                    ? Colors.white
+                                    : AppTheme.amberWarning,
                               ),
                               label: Text(
-                                _isEyesClosedSimulated ? "Reset to Alert" : "Simulate Drowsy Eyes",
+                                _isEyesClosedSimulated
+                                    ? "Reset to Alert"
+                                    : "Simulate Drowsy Eyes",
                                 style: const TextStyle(fontSize: 12),
                               ),
                             ),
@@ -245,17 +312,24 @@ class _DrowsinessMonitorScreenState extends State<DrowsinessMonitorScreen> {
                             onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text("Ophthalmic baseline calibrated for current driver."),
+                                  content: Text(
+                                    "Ophthalmic baseline calibrated for current driver.",
+                                  ),
                                   backgroundColor: AppTheme.surfaceDark,
                                 ),
                               );
                             },
                             icon: const Icon(Icons.tune, size: 18),
-                            label: const Text("Calibrate", style: TextStyle(fontSize: 12)),
+                            label: const Text(
+                              "Calibrate",
+                              style: TextStyle(fontSize: 12),
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.surfaceDark,
                               foregroundColor: AppTheme.cyanAccent,
-                              side: const BorderSide(color: AppTheme.cyanAccent),
+                              side: const BorderSide(
+                                color: AppTheme.cyanAccent,
+                              ),
                             ),
                           ),
                         ],

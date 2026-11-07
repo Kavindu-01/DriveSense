@@ -35,11 +35,9 @@ class MockDataService {
       _completedTrips
         ..clear()
         ..addAll(
-          decoded
-              .whereType<Map>()
-              .map(
-                (item) => _tripFromJson(Map<String, dynamic>.from(item)),
-              ),
+          decoded.whereType<Map>().map(
+            (item) => _tripFromJson(Map<String, dynamic>.from(item)),
+          ),
         );
 
       tripsChanged.value++;
@@ -103,31 +101,25 @@ class MockDataService {
     final safetyEventsJson = json['safetyEvents'];
 
     final routePoints = routePointsJson is List
-        ? routePointsJson
-              .whereType<Map>()
-              .map((item) {
-                final point = Map<String, dynamic>.from(item);
-                return TripRoutePoint(
-                  latitude: (point['latitude'] as num).toDouble(),
-                  longitude: (point['longitude'] as num).toDouble(),
-                );
-              })
-              .toList()
+        ? routePointsJson.whereType<Map>().map((item) {
+            final point = Map<String, dynamic>.from(item);
+            return TripRoutePoint(
+              latitude: (point['latitude'] as num).toDouble(),
+              longitude: (point['longitude'] as num).toDouble(),
+            );
+          }).toList()
         : <TripRoutePoint>[];
 
     final safetyEvents = safetyEventsJson is List
-        ? safetyEventsJson
-              .whereType<Map>()
-              .map((item) {
-                final event = Map<String, dynamic>.from(item);
-                return TripSafetyEvent(
-                  title: event['title'] as String,
-                  description: event['description'] as String,
-                  latitude: (event['latitude'] as num).toDouble(),
-                  longitude: (event['longitude'] as num).toDouble(),
-                );
-              })
-              .toList()
+        ? safetyEventsJson.whereType<Map>().map((item) {
+            final event = Map<String, dynamic>.from(item);
+            return TripSafetyEvent(
+              title: event['title'] as String,
+              description: event['description'] as String,
+              latitude: (event['latitude'] as num).toDouble(),
+              longitude: (event['longitude'] as num).toDouble(),
+            );
+          }).toList()
         : <TripSafetyEvent>[];
 
     return TripModel(
@@ -163,6 +155,32 @@ class MockDataService {
     safetyTierBadge: 'Elite Safe Driver (Tier 1)',
   );
 
+  /// Update the local demo profile after registration. Authentication and
+  /// profile data are stored locally only; this app has no backend yet.
+  static void registerDemoDriver({
+    required String fullName,
+    required String email,
+    required String vehicleModel,
+    required String licensePlate,
+    required String emergencyContactName,
+    required String emergencyContactPhone,
+  }) {
+    currentDriver = DriverProfileModel(
+      uid: 'DEMO-${DateTime.now().millisecondsSinceEpoch}',
+      fullName: fullName,
+      email: email,
+      phone: emergencyContactPhone,
+      vehicleModel: vehicleModel,
+      licensePlate: licensePlate,
+      emergencyContactName: emergencyContactName,
+      emergencyContactPhone: emergencyContactPhone,
+      overallSafetyScore: 100,
+      totalLoggedKm: 0,
+      totalTrips: 0,
+      safetyTierBadge: 'New Driver (Demo)',
+    );
+  }
+
   static List<CrashHotspotModel> getSampleHotspots() {
     return [
       CrashHotspotModel(
@@ -187,8 +205,7 @@ class MockDataService {
         distanceMeters: 1850,
         severity: HazardSeverity.severe,
         historicalCrashes: 18,
-        primaryRiskReason:
-            'Reverse camber bend + wet surface aquaplaning risk',
+        primaryRiskReason: 'Reverse camber bend + wet surface aquaplaning risk',
         recommendedSpeedKmh: 35.0,
       ),
       CrashHotspotModel(
@@ -200,8 +217,7 @@ class MockDataService {
         distanceMeters: 4200,
         severity: HazardSeverity.moderate,
         historicalCrashes: 11,
-        primaryRiskReason:
-            'Sudden deceleration tailbacks at toll approach',
+        primaryRiskReason: 'Sudden deceleration tailbacks at toll approach',
         recommendedSpeedKmh: 60.0,
       ),
       CrashHotspotModel(
@@ -239,12 +255,8 @@ class MockDataService {
       TripModel(
         id: 'TRIP-107',
         routeName: 'Colombo Fort to Kottawa Multimodal Hub',
-        startTime: DateTime.now().subtract(
-          const Duration(days: 1, hours: 3),
-        ),
-        endTime: DateTime.now().subtract(
-          const Duration(days: 1, hours: 2),
-        ),
+        startTime: DateTime.now().subtract(const Duration(days: 1, hours: 3)),
+        endTime: DateTime.now().subtract(const Duration(days: 1, hours: 2)),
         distanceKm: 22.4,
         avgSpeedKmh: 38.0,
         topSpeedKmh: 75.0,
@@ -257,9 +269,7 @@ class MockDataService {
       TripModel(
         id: 'TRIP-106',
         routeName: 'Horana Town to Pitipana Technology Park',
-        startTime: DateTime.now().subtract(
-          const Duration(days: 2, hours: 5),
-        ),
+        startTime: DateTime.now().subtract(const Duration(days: 2, hours: 5)),
         endTime: DateTime.now().subtract(
           const Duration(days: 2, hours: 4, minutes: 20),
         ),
@@ -274,9 +284,6 @@ class MockDataService {
       ),
     ];
 
-    return <TripModel>[
-      ..._completedTrips,
-      ...sampleTrips,
-    ];
+    return <TripModel>[..._completedTrips, ...sampleTrips];
   }
 }

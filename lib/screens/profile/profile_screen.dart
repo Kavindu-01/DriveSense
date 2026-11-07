@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../theme/app_theme.dart';
 import '../../services/mock_data_service.dart';
 import '../auth/login_screen.dart';
@@ -19,7 +20,10 @@ class ProfileScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text("CANCEL", style: TextStyle(color: AppTheme.textMuted)),
+            child: const Text(
+              "CANCEL",
+              style: TextStyle(color: AppTheme.textMuted),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -73,7 +77,10 @@ class ProfileScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: AppTheme.cyanAccent.withOpacity(0.15),
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppTheme.cyanAccent, width: 2),
+                          border: Border.all(
+                            color: AppTheme.cyanAccent,
+                            width: 2,
+                          ),
                         ),
                         child: const Icon(
                           Icons.person,
@@ -104,11 +111,16 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppTheme.amberWarning.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: AppTheme.amberWarning.withOpacity(0.4)),
+                                border: Border.all(
+                                  color: AppTheme.amberWarning.withOpacity(0.4),
+                                ),
                               ),
                               child: Text(
                                 driver.safetyTierBadge,
@@ -145,10 +157,26 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _profileRow(Icons.directions_car, "Registered Vehicle", driver.vehicleModel),
-                      _profileRow(Icons.badge_outlined, "License Plate", driver.licensePlate),
-                      _profileRow(Icons.contact_phone, "Emergency Contact", "${driver.emergencyContactName} (${driver.emergencyContactPhone})"),
-                      _profileRow(Icons.security, "Crash SOS Dispatch", "Armed • High-G Sensor Trigger"),
+                      _profileRow(
+                        Icons.directions_car,
+                        "Registered Vehicle",
+                        driver.vehicleModel,
+                      ),
+                      _profileRow(
+                        Icons.badge_outlined,
+                        "License Plate",
+                        driver.licensePlate,
+                      ),
+                      _profileRow(
+                        Icons.contact_phone,
+                        "Emergency Contact",
+                        "${driver.emergencyContactName} (${driver.emergencyContactPhone})",
+                      ),
+                      _profileRow(
+                        Icons.security,
+                        "Crash SOS Dispatch",
+                        "Armed • High-G Sensor Trigger",
+                      ),
                     ],
                   ),
                 ),
@@ -172,12 +200,28 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      Wrap(
+                        alignment: WrapAlignment.spaceAround,
+                        runSpacing: 16,
                         children: [
-                          _statBox("SAFETY SCORE", "${driver.overallSafetyScore}%", AppTheme.greenEco),
-                          _statBox("TOTAL TRIPS", "${driver.totalTrips}", AppTheme.cyanAccent),
-                          _statBox("LOGGED KM", "${driver.totalLoggedKm.toInt()}", AppTheme.amberWarning),
+                          _statBox(
+                            context,
+                            "SAFETY SCORE",
+                            "${driver.overallSafetyScore}%",
+                            AppTheme.greenEco,
+                          ),
+                          _statBox(
+                            context,
+                            "TOTAL TRIPS",
+                            "${driver.totalTrips}",
+                            AppTheme.cyanAccent,
+                          ),
+                          _statBox(
+                            context,
+                            "LOGGED KM",
+                            "${driver.totalLoggedKm.toInt()}",
+                            AppTheme.amberWarning,
+                          ),
                         ],
                       ),
                     ],
@@ -192,7 +236,10 @@ class ProfileScreen extends StatelessWidget {
                 icon: const Icon(Icons.logout, color: AppTheme.redDanger),
                 label: const Text(
                   "LOG OUT OF DRIVESENSE",
-                  style: TextStyle(color: AppTheme.redDanger, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: AppTheme.redDanger,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: AppTheme.redDanger),
@@ -218,7 +265,13 @@ class ProfileScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AppTheme.textMuted, fontSize: 11)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppTheme.textMuted,
+                    fontSize: 11,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   val,
@@ -236,28 +289,31 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _statBox(String label, String val, Color color) {
-    return Column(
-      children: [
-        Text(
-          val,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w900,
-            fontSize: 22,
-            fontFamily: 'monospace',
+  Widget _statBox(BuildContext context, String label, String val, Color color) {
+    return SizedBox(
+      width: (MediaQuery.sizeOf(context).width - 72) / 3,
+      child: Column(
+        children: [
+          Text(
+            val,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w900,
+              fontSize: 22,
+              fontFamily: 'monospace',
+            ),
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppTheme.textMuted,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppTheme.textMuted,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
