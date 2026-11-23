@@ -152,14 +152,14 @@ class MockDataService {
   }
 
   static DriverProfileModel currentDriver = DriverProfileModel(
-    uid: 'DRV-90412',
-    fullName: 'Diluka Wijesinghe',
-    email: 'diluka.w@nsbm.ac.lk',
-    phone: '+94 77 123 4567',
+    uid: 'placeholder',
+    fullName: 'placeholder',
+    email: 'placeholder',
+    phone: 'placeholder',
     vehicleModel: 'Toyota Aqua Hybrid (2020)',
-    licensePlate: 'WP CBH-4892',
-    emergencyContactName: 'Dr. K. Perera (Spouse)',
-    emergencyContactPhone: '+94 71 987 6543',
+    licensePlate: 'placeholder',
+    emergencyContactName: 'placeholder',
+    emergencyContactPhone: 'placeholder',
     overallSafetyScore: 94,
     totalLoggedKm: 1420.5,
     totalTrips: 68,
